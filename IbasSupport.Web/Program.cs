@@ -31,10 +31,4 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.MapPost("/api/support", async (SupportMessage msg, ISupportRepository repo) =>
-{
-    var saved = await repo.CreateAsync(msg);
-    return Results.Created($"/api/support/{saved.id}", saved);
-});
-
 app.Run();
