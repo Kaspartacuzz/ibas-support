@@ -1,0 +1,189 @@
+@page "/CreateSupport"
+
+@using IbasSupport.Web.Models
+@using IbasSupport.Web.Services
+@inject ISupportRepository SupportRepo
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<h3 class="mb-3">Opret support-henvendelse</h3>
+
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="alert">
+        @_statusMessage
+    </div>
+}
+
+<EditForm Model="_model" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <fieldset class="mb-3">
+        <legend>Henvendelse</legend>
+
+        <div class="mb-3">
+            <label class="form-label">Kategori</label>
+            <InputSelect class="form-select" @bind-Value="_model.category">
+                <option value="">-- Vælg kategori --</option> @* placeholder, ugyldig værdi *@
+                @foreach (var c in _categories)
+                {
+                    <option value="@c">@c</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => _model.category)" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Dato</label>
+            <InputDate class="form-control" @bind-Value="_model.dateTime" />
+            <ValidationMessage For="@(() => _model.dateTime)" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Beskrivelse</label>
+            <InputTextArea class="form-control" rows="5" @bind-Value="_model.description" />
+            <ValidationMessage For="@(() => _model.description)" />
+        </div>
+    </fieldset>
+
+    <fieldset class="mb-3">
+        <legend>Bruger</legend>
+
+        <div class="mb-3">
+            <label class="form-label">Navn</label>
+            <InputText class="form-control" @bind-Value="_model.user.name" />
+            <ValidationMessage For="@(() => _model.user.name)" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <InputText class="form-control" @bind-Value="_model.user.email" />
+            <ValidationMessage For="@(() => _model.user.email)" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Telefon (valgfri)</label>
+            <InputText class="form-control" @bind-Value="_model.user.phone" />
+            <ValidationMessage For="@(() => _model.user.phone)" />
+        </div>
+    </fieldset>
+
+    <fieldset class="mb-3">
+        <legend>Forhandler (valgfri)</legend>
+
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="dealerToggle"
+                   @bind="includeDealer"
+                   @bind:after="OnDealerToggle" />
+            <label class="form-check-label" for="dealerToggle">Tilføj forhandler</label>
+        </div>
+
+        @if (includeDealer && _model.dealer is not null)
+        {
+            <div class="mb-3">
+                <label class="form-label">Navn</label>
+                <InputText class="form-control" @bind-Value="_model.dealer!.name" />
+                <ValidationMessage For="@(() => _model.dealer!.name)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Adresse (valgfri)</label>
+                <InputText class="form-control" @bind-Value="_model.dealer!.address" />
+                <ValidationMessage For="@(() => _model.dealer!.address)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Telefon (valgfri)</label>
+                <InputText class="form-control" @bind-Value="_model.dealer!.phone" />
+                <ValidationMessage For="@(() => _model.dealer!.phone)" />
+            </div>
+        }
+    </fieldset>
+
+    <button class="btn btn-primary" disabled="@_busy">Opret henvendelse</button>
+</EditForm>
+
+@code {
+    private SupportMessage _model = new()
+    {
+        id = Guid.NewGuid().ToString("N"),
+        dateTime = DateTime.Today,
+        user = new User()
+        // dealer holdes null som udgangspunkt, så nested validering ikke fejler
+    };
+
+    private bool includeDealer = false;
+    private bool _busy = false;
+    private string? _statusMessage;
+    private bool _isError;
+    
+    // Fast liste over cykel-reparationskategorier
+    private readonly string[] _categories =
+    {
+        "Bremser",
+        "Gear",
+        "Dæk/Slange",
+        "Kæde/Kassette",
+        "Hjul/Eger",
+        "Styr/Frempind",
+        "Sadel/Seatpost",
+        "Kranksæt/BB",
+        "Elcykel",
+        "Serviceeftersyn",
+        "Andet"
+    };
+
+
+    private void OnDealerToggle()
+    {
+        if (includeDealer && _model.dealer is null)
+            _model.dealer = new Dealer();   // klargør felterne, når togglen slås til
+        if (!includeDealer)
+            _model.dealer = null;           // fjern for at undgå validering, når togglen slås fra
+    }
+
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            _busy = true;
+            _statusMessage = null;
+            _isError = false;
+
+            // Cosmos partition key = category. Sørg for at den ikke er tom.
+            if (string.IsNullOrWhiteSpace(_model.category))
+            {
+                _statusMessage = "Kategori skal udfyldes (partition key).";
+                _isError = true;
+                return;
+            }
+
+            // Opret i Cosmos
+            var created = await SupportRepo.CreateAsync(_model);
+
+            _statusMessage = $"Henvendelsen er oprettet (id: {created.id}).";
+            _isError = false;
+
+            // Nulstil formular
+            _model = new SupportMessage
+            {
+                id = Guid.NewGuid().ToString("N"),
+                dateTime = DateTime.Today,
+                user = new User()
+            };
+            includeDealer = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Der opstod en fejl: {ex.Message}";
+            _isError = true;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

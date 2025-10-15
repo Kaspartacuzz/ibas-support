@@ -4,8 +4,7 @@ namespace IbasSupport.Web.Models;
 
 public class User
 {
-    [Range(1, int.MaxValue)]
-    public int userId { get; set; }
+    public int? userId { get; set; }
     
     [Required, StringLength(200)]
     public string name { get; set; }

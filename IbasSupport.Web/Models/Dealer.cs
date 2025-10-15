@@ -4,8 +4,7 @@ namespace IbasSupport.Web.Models;
 
 public class Dealer
 { 
-    [Range(0, int.MaxValue)]
-    public int dealerId { get; set; } 
+    public int? dealerId { get; set; } 
     
     [Required, StringLength(200)]
     public string name { get; set; } 

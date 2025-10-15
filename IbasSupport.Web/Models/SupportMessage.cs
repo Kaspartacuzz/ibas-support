@@ -9,9 +9,7 @@ public class SupportMessage
         
         [Required, StringLength(100)]
         public string category { get; set; }
-        
-        [Range(1, int.MaxValue)]
-        public int requestId { get; set; }
+        public int? requestId { get; set; }
         
         [DataType(DataType.DateTime)]
         public DateTime dateTime { get; set; }
