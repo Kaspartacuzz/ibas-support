@@ -16,7 +16,7 @@
 }
 
 <EditForm Model="_model" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
+    <ObjectGraphDataAnnotationsValidator />
     <ValidationSummary />
 
     <fieldset class="mb-3">
@@ -121,19 +121,13 @@
     // Fast liste over cykel-reparationskategorier
     private readonly string[] _categories =
     {
-        "Bremser",
-        "Gear",
-        "Dæk/Slange",
-        "Kæde/Kassette",
-        "Hjul/Eger",
-        "Styr/Frempind",
-        "Sadel/Seatpost",
-        "Kranksæt/BB",
-        "Elcykel",
-        "Serviceeftersyn",
+        "Teknisk spørgsmål vedr. køb af en ny cykel",
+        "Gør-det-selv’er som gerne vil købe billige reservedele",
+        "Forslag til ændringer på eksisterende cykelmodeller/nye smarte features",
+        "Hvor ligger nærmeste forhandler",
+        "Send mig det nyeste katalog",
         "Andet"
     };
-
 
     private void OnDealerToggle()
     {

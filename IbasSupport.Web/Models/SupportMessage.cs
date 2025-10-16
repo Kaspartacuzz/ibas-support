@@ -17,7 +17,8 @@ public class SupportMessage
         [Required, StringLength(2000)]
         public string description { get; set; }
         
-        [Required]
+        [Required]                     
+        [ValidateComplexType]   
         public User user { get; set; }
         
         public Dealer? dealer { get; set; }

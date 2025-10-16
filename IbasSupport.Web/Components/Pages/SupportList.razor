@@ -1,0 +1,136 @@
+@page "/SupportList"
+@using IbasSupport.Web.Models
+@using IbasSupport.Web.Services
+@inject ISupportRepository SupportRepo
+
+@rendermode InteractiveServer
+
+<h3 class="mb-3">Supporthenvendelser</h3>
+
+<div class="row g-3 align-items-end mb-3">
+    <div class="col-auto">
+        <label class="form-label">Kategori</label>
+        <InputSelect class="form-select" @bind-Value="_selectedCategory">
+            <option value="">(Alle kategorier)</option>
+            @foreach (var c in _categories)
+            {
+                <option value="@c">@c</option>
+            }
+        </InputSelect>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-secondary" @onclick="Reload" disabled="@_loading">Opdater listen
+        </button>
+    </div>
+    <div class="col-auto">
+        <a class="btn btn-outline-primary" href="/CreateSupport">Opret ny</a>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger">@_error</div>
+}
+else if (_loading)
+{
+    <div>Henter data...</div>
+}
+else if (_items.Count == 0)
+{
+    <div class="alert alert-info">Ingen henvendelser endnu.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th style="width:110px;">Request #</th>
+                    <th style="width:150px;">Dato</th>
+                    <th style="width:150px;">Kategori</th>
+                    <th style="width:220px;">Bruger</th>
+                    <th style="width:220px;">Forhandler</th>
+                    <th>Beskrivelse</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in _items)
+                {
+                    <tr>
+                        <td>@(m.requestId?.ToString() ?? "-")</td>
+                        <td>@m.dateTime.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td><span class="badge text-bg-secondary">@m.category</span></td>
+                        <td>
+                            <div>@m.user?.name</div>
+                            <small class="text-muted">@m.user?.email</small>
+                        </td>
+                        <td>
+                            @if (m.dealer is not null)
+                            {
+                                <div>@m.dealer.name</div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td>@Truncate(m.description, 140)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private readonly string[] _categories =
+    {
+        "Teknisk spørgsmål vedr. køb af en ny cykel",
+        "Gør-det-selv’er som gerne vil købe billige reservedele",
+        "Forslag til ændringer på eksisterende cykelmodeller/nye smarte features",
+        "Hvor ligger nærmeste forhandler",
+        "Send mig det nyeste katalog",
+        "Andet"
+    };
+
+    private string _selectedCategory = "";
+    private bool _loading;
+    private string? _error;
+    private List<SupportMessage> _items = new();
+
+    protected override async Task OnInitializedAsync()
+        => await LoadAsync();
+
+    private async Task Reload() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _loading = true;
+            _error = null;
+            _items.Clear();
+
+            IReadOnlyList<SupportMessage> data =
+                string.IsNullOrWhiteSpace(_selectedCategory)
+                    ? await SupportRepo.GetAllAsync()
+                    : await SupportRepo.GetByCategoryAsync(_selectedCategory);
+
+            _items = data.ToList();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Kunne ikke hente henvendelser: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string Truncate(string value, int max)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        return value.Length <= max ? value : value[..max] + "…";
+    }
+}
